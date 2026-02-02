@@ -1,0 +1,71 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local highlightList = {}
+
+-- Очистка всех существующих Highlight
+local function clearHighlights()
+    for _, hl in ipairs(highlightList) do
+        if hl and hl.Parent then
+            hl:Destroy()
+        end
+    end
+    highlightList = {}
+end
+
+-- Обновление Highlight врагов
+local function updateHighlights()
+    clearHighlights()
+    
+    local charactersFolder = Workspace:WaitForChild("Characters")
+    local terrorists = charactersFolder:WaitForChild("Terrorists")
+    local counterTerrorists = charactersFolder:WaitForChild("Counter-Terrorists")
+    
+    -- Находим свою модель
+    local myModel = terrorists:FindFirstChild(player.Name) or counterTerrorists:FindFirstChild(player.Name)
+    if not myModel then return end
+    
+    -- Определяем врагов
+    local enemyFolder = nil
+    local enemyColor = Color3.fromRGB(255, 255, 255)
+    
+    if myModel.Parent == terrorists then
+        enemyFolder = counterTerrorists
+        enemyColor = Color3.fromRGB(0, 0, 255) -- синие
+    else
+        enemyFolder = terrorists
+        enemyColor = Color3.fromRGB(255, 255, 0) -- жёлтые
+    end
+    
+    -- Создаём Highlight для всех врагов
+    for _, model in ipairs(enemyFolder:GetChildren()) do
+        if model:IsA("Model") then
+            local hl = Instance.new("Highlight")
+            hl.Adornee = model
+            hl.FillColor = enemyColor
+            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+            hl.Parent = model
+            table.insert(highlightList, hl)
+        end
+    end
+end
+
+-- Автоматическое обновление каждую секунду
+RunService.Heartbeat:Connect(function(dt)
+    -- Можно обновлять раз в секунду
+    if not workspace:FindFirstChild("HighlightUpdateTimer") then
+        local timer = Instance.new("NumberValue")
+        timer.Name = "HighlightUpdateTimer"
+        timer.Value = 0
+        timer.Parent = workspace
+    end
+
+    local timer = workspace:FindFirstChild("HighlightUpdateTimer")
+    timer.Value = timer.Value + dt
+    if timer.Value >= 1 then
+        updateHighlights()
+        timer.Value = 0
+    end
+end)
